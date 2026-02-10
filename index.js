@@ -20,8 +20,50 @@ const {
 const app = express();
 const cache = new NodeCache({ stdTTL: 300 });
 
-app.use(cors());
+// API Key untuk proteksi
+const API_KEY = 'tworuan_dracin_2026_secret_key';
+
+// CORS - hanya izinkan domain tertentu
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173', 
+    'https://tworuan.com',
+    'https://www.tworuan.com'
+];
+
+app.use(cors({
+    origin: function(origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) === -1) {
+            return callback(new Error('CORS policy: Access denied'), false);
+        }
+        return callback(null, true);
+    }
+}));
+
 app.use(express.json());
+
+// Middleware untuk validasi API Key
+app.use((req, res, next) => {
+    // Skip validation untuk root endpoint
+    if (req.path === '/') {
+        return next();
+    }
+    
+    const apiKey = req.headers['x-api-key'];
+    
+    if (!apiKey || apiKey !== API_KEY) {
+        return res.status(403).json({
+            status: false,
+            message: 'Forbidden: Invalid or missing API key',
+            data: null
+        });
+    }
+    
+    next();
+});
 
 const sendResponse = (res, result) => {
     if (result.status === 'success') {
@@ -280,7 +322,7 @@ app.get('/', (req, res) => {
 module.exports = app;
 
 if (require.main === module) {
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 3001;
     app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
     });
